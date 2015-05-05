@@ -1,0 +1,25 @@
+target-group test
+  load-balancing round-robin
+  target 1.1.1.1:4646
+  target 1.1.1.2:4646
+
+target-group normal-west
+  load-balancing round-robin
+  target 111.1.1.3:1 weight 2.0
+  target 111.1.1.4:23
+  target 111.1.1.5:456
+
+target-group normal-east
+  load-balancing round-robin
+  target 1.1.1.6:5000 weight 2.0
+  target 1.1.1.7:46466
+  target 1.1.1.8:4646
+
+route test
+  match "address=4.4.4.4"
+  forward-to test weight 1.0
+
+route otherwise
+  match "address~=5.5.5.5"
+  forward-to normal-west
+  forward-to normal-east weight 100

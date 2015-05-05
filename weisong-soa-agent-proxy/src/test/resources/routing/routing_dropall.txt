@@ -1,0 +1,7 @@
+## 
+# Minimal configuration
+#
+route otherwise
+  match any
+  drop
+  

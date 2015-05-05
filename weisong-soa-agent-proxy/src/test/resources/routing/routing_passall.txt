@@ -1,0 +1,10 @@
+## 
+# Minimal configuration
+#
+target-group test
+  target 1.1.1.1:4646
+  target 1.1.1.2:5678
+  
+route otherwise
+  match any
+  forward-to test
