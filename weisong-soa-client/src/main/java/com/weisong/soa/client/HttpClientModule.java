@@ -1,7 +1,5 @@
 package com.weisong.soa.client;
 
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,9 +44,6 @@ public class HttpClientModule extends BaseCallModule {
 		}
 		@Bean public HttpClientAspect httpClientAspect() {
 			return new HttpClientAspect();
-		}
-		@Bean public CloseableHttpClient closeableHttpClient() {
-			return HttpClients.createDefault();
 		}
 	}
 }

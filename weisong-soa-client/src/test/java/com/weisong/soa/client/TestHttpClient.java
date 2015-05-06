@@ -10,9 +10,10 @@ import javax.annotation.PostConstruct;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -35,7 +36,6 @@ public class TestHttpClient {
 	private String service = "TestService";
 	private String version = "0.0.1";
 
-	@Autowired private HttpClient client;
 	@Autowired private HttpRequestFactory factory;
 	
 	@Autowired private ZkPropertyChangeRegistry reg;
@@ -84,7 +84,6 @@ public class TestHttpClient {
 		}
 		final HttpUriRequest[] requests = list.toArray(new HttpUriRequest[list.size()]);
 
-		final AtomicInteger index = new AtomicInteger();
 		final AtomicInteger count = new AtomicInteger();
 
 		int workerCount = 5;
@@ -94,18 +93,21 @@ public class TestHttpClient {
 			workers[i] = new Thread() {
 				public void run() {
 					setName("" + a);
+					int index = 0;
+					HttpUriRequest request = null;
+					CloseableHttpClient client = HttpClients.createDefault();
 					while(count.intValue() < totalRequests) {
 				        try {
-				        	HttpUriRequest request = requests[index.intValue()];
+					        synchronized (TestHttpClient.class) {
+						        index = ++index % requests.length;
+					        	request = requests[index];
+							}
 				        	factory.regenerateRequestId(request);
 							client.execute(request, responseHandler);
 							Thread.sleep(delayBetweenRequest);
 						} 
 				        catch (Exception e) {
 				        	e.printStackTrace();
-						}
-				        synchronized (TestHttpClient.class) {
-					        index.set(index.incrementAndGet() % requests.length);
 						}
 				        count.incrementAndGet();
 					}
