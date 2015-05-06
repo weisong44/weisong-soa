@@ -66,7 +66,8 @@ class ServiceConnectionManager {
 		zkHandler.getZkClient().watch(path, new NodeCacheListener() {
 			@Override
 			public void nodeChanged() throws Exception {
-				logger.info("==> Reading routing config");
+				logger.info(String.format(
+					"Configuration for %s changed on ZK, read again", getDesc()));
 				readConfig();
 			}
 		});
@@ -76,6 +77,7 @@ class ServiceConnectionManager {
 			@Override
 			public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
 					throws Exception {
+				logger.info("Target registration changed on ZK, read again");
 				readTargets();
 			}
 		});
@@ -109,6 +111,9 @@ class ServiceConnectionManager {
 					pool = new ConnectionPool(engine, connStr, 10);
 					targetToPoolMap.put(connStr, pool);
 					pool.addListener(connMgr);
+					if(availTargetSet.contains(connStr)) {
+						pool.setRegistered(true);
+					}
 				}
 				else {
 					// TODO: Simulate connection, is this the best way ?!?!

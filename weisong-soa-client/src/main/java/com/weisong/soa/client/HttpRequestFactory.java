@@ -2,7 +2,8 @@ package com.weisong.soa.client;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.UUID;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -13,11 +14,15 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpTrace;
+import org.apache.http.client.methods.HttpUriRequest;
 
 import com.weisong.soa.proxy.ProxyConst;
 import com.weisong.soa.service.ServiceConst;
 
 public class HttpRequestFactory {
+	
+	final static private AtomicInteger idSeed = new AtomicInteger(
+			new Random().nextInt(Integer.MAX_VALUE));
 	
 	final static private String urlPrefix = "http://localhost:" + ProxyConst.PROXY_PORT; 
 
@@ -81,10 +86,18 @@ public class HttpRequestFactory {
 		request.setURI(url);
 	}
 
-	private void populateHeader(HttpRequestBase request, String domain, String service, String version) {
+	public void regenerateRequestId(HttpUriRequest request) {
+		request.setHeader(ServiceConst.HEADER_REQUEST_ID, nextRequestId());
+	}
+	
+	public String nextRequestId() {
+		return String.valueOf(idSeed.incrementAndGet());
+	}
+	
+	private void populateHeader(HttpUriRequest request, String domain, String service, String version) {
 		request.setHeader(ServiceConst.HEADER_DOMAIN, domain);
 		request.setHeader(ServiceConst.HEADER_SERVICE_NAME, service);
 		request.setHeader(ServiceConst.HEADER_SERVICE_VERSION, version);
-		request.setHeader(ServiceConst.HEADER_REQUEST_ID, UUID.randomUUID().toString());
+		request.setHeader(ServiceConst.HEADER_REQUEST_ID, nextRequestId());
 	}
 }

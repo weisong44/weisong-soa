@@ -87,15 +87,18 @@ public class TestHttpClient {
 		final AtomicInteger index = new AtomicInteger();
 		final AtomicInteger count = new AtomicInteger();
 
-		Thread[] workers = new Thread[5];
-		for(int i = 0; i < 5; i++) {
+		int workerCount = 5;
+		Thread[] workers = new Thread[workerCount];
+		for(int i = 0; i < workerCount; i++) {
 			final int a = i + 1;
 			workers[i] = new Thread() {
 				public void run() {
 					setName("" + a);
 					while(count.intValue() < totalRequests) {
 				        try {
-							client.execute(requests[index.intValue()], responseHandler);
+				        	HttpUriRequest request = requests[index.intValue()];
+				        	factory.regenerateRequestId(request);
+							client.execute(request, responseHandler);
 							Thread.sleep(delayBetweenRequest);
 						} 
 				        catch (Exception e) {
