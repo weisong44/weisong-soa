@@ -3,7 +3,6 @@ package com.weisong.soa.client;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -21,11 +20,10 @@ import com.weisong.soa.service.ServiceConst;
 
 public class HttpRequestFactory {
 	
-	final static private AtomicInteger idSeed = new AtomicInteger(
-			new Random().nextInt(Integer.MAX_VALUE));
+	final static private String urlPrefix = "http://localhost:" + ProxyConst.PROXY_PORT;
 	
-	final static private String urlPrefix = "http://localhost:" + ProxyConst.PROXY_PORT; 
-
+	private int requestIdSeed = getInitialRequestId();
+	
 	public HttpGet createHttpGet(String domain, String serviceName, String version, String uri) 
 			throws URISyntaxException {
 		return create(HttpGet.class, domain, serviceName, version, uri);
@@ -86,18 +84,27 @@ public class HttpRequestFactory {
 		request.setURI(url);
 	}
 
-	public void regenerateRequestId(HttpUriRequest request) {
-		request.setHeader(ServiceConst.HEADER_REQUEST_ID, nextRequestId());
+	public void generateRequestId(HttpUriRequest request) {
+		request.setHeader(ServiceConst.HEADER_REQUEST_ID, getNextRequestId());
 	}
 	
-	public String nextRequestId() {
-		return String.valueOf(idSeed.incrementAndGet());
+	private int getInitialRequestId() {
+		return 1000000000 + new Random().nextInt(999999999);
+	}
+	
+	public String getNextRequestId() {
+		synchronized (HttpRequestFactory.class) {
+			if(++requestIdSeed >= Integer.MAX_VALUE) {
+				requestIdSeed = getInitialRequestId();
+			}
+			return String.valueOf(requestIdSeed);
+		}
 	}
 	
 	private void populateHeader(HttpUriRequest request, String domain, String service, String version) {
 		request.setHeader(ServiceConst.HEADER_DOMAIN, domain);
 		request.setHeader(ServiceConst.HEADER_SERVICE_NAME, service);
 		request.setHeader(ServiceConst.HEADER_SERVICE_VERSION, version);
-		request.setHeader(ServiceConst.HEADER_REQUEST_ID, nextRequestId());
+		generateRequestId(request);
 	}
 }

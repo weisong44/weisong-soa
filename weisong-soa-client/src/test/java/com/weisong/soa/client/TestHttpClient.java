@@ -28,7 +28,7 @@ import com.weisong.soa.core.zk.config.ZkPropertyChangeRegistry;
 import com.weisong.soa.core.zk.config.ZkPropertyChangeRegistry.Listener;
 
 public class TestHttpClient {
-	
+		
 	private int totalRequests = 200000;
 	private int delayBetweenRequest = 0;
 	
@@ -86,6 +86,7 @@ public class TestHttpClient {
 
 		final AtomicInteger count = new AtomicInteger();
 
+		final AtomicInteger index = new AtomicInteger();
 		int workerCount = 5;
 		Thread[] workers = new Thread[workerCount];
 		for(int i = 0; i < workerCount; i++) {
@@ -93,16 +94,17 @@ public class TestHttpClient {
 			workers[i] = new Thread() {
 				public void run() {
 					setName("" + a);
-					int index = 0;
 					HttpUriRequest request = null;
 					CloseableHttpClient client = HttpClients.createDefault();
 					while(count.intValue() < totalRequests) {
 				        try {
 					        synchronized (TestHttpClient.class) {
-						        index = ++index % requests.length;
-					        	request = requests[index];
+						        if(index.incrementAndGet() >= requests.length) {
+						        	index.set(0);
+						        }
+					        	request = requests[index.intValue()];
 							}
-				        	factory.regenerateRequestId(request);
+				        	factory.generateRequestId(request);
 							client.execute(request, responseHandler);
 							Thread.sleep(delayBetweenRequest);
 						} 
