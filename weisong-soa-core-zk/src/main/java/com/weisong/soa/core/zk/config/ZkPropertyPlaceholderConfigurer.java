@@ -89,6 +89,7 @@ public class ZkPropertyPlaceholderConfigurer extends ReadablePropertyPlaceholder
 	}
 	
 	private void setZkNodePath(Properties properties) {
+        Object o = System.getProperties();
 		zkNodePath = System.getProperty(ZkConst.ZK_NODE_PATH);
 		if(zkNodePath == null) {
 			String type = properties.getProperty("app.type");

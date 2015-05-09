@@ -37,7 +37,7 @@ public class ConnectionPool {
 	
 	@Getter private boolean isRegistered;
 	
-	private ProxyEngine engine;
+	private Bootstrap bootstrap;
 	private Timer timer = new Timer();
 	private HousekeepingTask task = new HousekeepingTask();
 	
@@ -48,7 +48,7 @@ public class ConnectionPool {
 	private Set<Listener> listeners = new HashSet<>();
 	
 	public ConnectionPool(ProxyEngine engine, String connStr, int maxSize) {
-		this.engine = engine;
+		this.bootstrap = engine.getConnMgr().getBootstrap();
 		this.connStr = connStr;
 		this.maxSize = maxSize;
 		String[] tokens = connStr.split(":");
@@ -138,7 +138,6 @@ public class ConnectionPool {
 					if(isRegistered == false) {
 						break;
 					}
-					Bootstrap bootstrap = engine.getConnMgr().getBootstrap();
 					ChannelFuture f = bootstrap.connect(address, port).sync();
 					synchronized (connections) {
 						connections.add(f.channel());

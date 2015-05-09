@@ -26,15 +26,14 @@ import com.weisong.soa.agent.impl.MainModule;
 import com.weisong.soa.core.zk.ZkConst;
 import com.weisong.soa.core.zk.config.ZkPropertyChangeRegistry;
 import com.weisong.soa.core.zk.config.ZkPropertyChangeRegistry.Listener;
+import com.weisong.soa.service.ServiceDescriptor;
 
 public class TestHttpClient {
 		
 	private int totalRequests = 200000;
 	private int delayBetweenRequest = 0;
 	
-	private String domain = "test";
-	private String service = "TestService";
-	private String version = "0.0.1";
+	private ServiceDescriptor desc = new ServiceDescriptor("test", "TestService", "0.0.1");
 
 	@Autowired private HttpRequestFactory factory;
 	
@@ -78,14 +77,17 @@ public class TestHttpClient {
 		
 		List<HttpUriRequest> list = new LinkedList<>();
 		for(int i = 0; i < 5; i++) {
-			list.add(factory.createHttpGet(domain, service, version, "/hello" + i));
-			list.add(factory.createHttpPost(domain, service, version, "/hello" + i));
-			list.add(factory.createHttpPut(domain, service, version, "/hello" + i));
+			String url = "/hello" + i;
+			list.add(factory.createHttpGet(desc, url));
+			list.add(factory.createHttpPost(desc, url));
+			list.add(factory.createHttpPut(desc, url));
 		}
 		final HttpUriRequest[] requests = list.toArray(new HttpUriRequest[list.size()]);
 
 		final AtomicInteger count = new AtomicInteger();
 
+		System.setProperty("http.maxConnections", "5");
+		
 		final AtomicInteger index = new AtomicInteger();
 		int workerCount = 5;
 		Thread[] workers = new Thread[workerCount];
@@ -95,7 +97,7 @@ public class TestHttpClient {
 				public void run() {
 					setName("" + a);
 					HttpUriRequest request = null;
-					CloseableHttpClient client = HttpClients.createDefault();
+					CloseableHttpClient client = HttpClients.createSystem();
 					while(count.intValue() < totalRequests) {
 				        try {
 					        synchronized (TestHttpClient.class) {

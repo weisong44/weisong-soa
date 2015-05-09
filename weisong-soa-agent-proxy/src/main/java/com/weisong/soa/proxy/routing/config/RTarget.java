@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +18,7 @@ public class RTarget extends BaseRoutingConfig {
 	
 	final private Logger logger = LoggerFactory.getLogger(getClass().getName());
 	
-	@Getter private RTargetGroup.Proc parentProc;
+	@Getter @JsonIgnore private RTargetGroup.Proc parentProc;
 	@Getter @Setter private String target;
 	@Getter @Setter private float weight = 1f;
 	

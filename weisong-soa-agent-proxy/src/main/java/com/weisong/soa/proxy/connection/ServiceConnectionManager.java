@@ -108,7 +108,7 @@ class ServiceConnectionManager {
 			synchronized (this) {
 				ConnectionPool pool = targetToPoolMap.get(connStr);
 				if(pool == null) {
-					pool = new ConnectionPool(engine, connStr, 10);
+					pool = new ConnectionPool(engine, connStr, 5);
 					targetToPoolMap.put(connStr, pool);
 					pool.addListener(connMgr);
 					if(availTargetSet.contains(connStr)) {

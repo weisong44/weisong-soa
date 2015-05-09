@@ -144,6 +144,10 @@ public class RRoutingConfigFactory {
 			@Override
 			public void exitForward_to(Forward_toContext ctx) {
 				route.getForwardToList().add(forwardTo);
+				RTargetGroup tg = forwardTo.getTargetGroup();
+				if(tg != null) {
+					route.getForwardToNames().add(forwardTo.getTargetGroup().getName());
+				}
 				forwardTo = null;
 			}
 
@@ -170,6 +174,7 @@ public class RRoutingConfigFactory {
 			@Override
 			public void exitDrop(DropContext ctx) {
 				route.getForwardToList().clear();
+				route.getForwardToNames().clear();
 			}
         });
 

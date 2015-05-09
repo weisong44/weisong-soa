@@ -3,6 +3,8 @@ package com.weisong.soa.proxy.routing.config;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -23,6 +25,7 @@ public class RRoutingConfig extends BaseRoutingConfig {
     	return null;
     }
     
+    @JsonIgnore
     public List<RTarget> getAllTargets() {
         List<RTarget> targets = new LinkedList<>();
     	for(RRoute r : routes) {

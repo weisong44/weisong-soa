@@ -17,6 +17,7 @@ import org.apache.http.client.methods.HttpUriRequest;
 
 import com.weisong.soa.proxy.ProxyConst;
 import com.weisong.soa.service.ServiceConst;
+import com.weisong.soa.service.ServiceDescriptor;
 
 public class HttpRequestFactory {
 	
@@ -24,52 +25,52 @@ public class HttpRequestFactory {
 	
 	private int requestIdSeed = getInitialRequestId();
 	
-	public HttpGet createHttpGet(String domain, String serviceName, String version, String uri) 
+	public HttpGet createHttpGet(ServiceDescriptor desc, String uri) 
 			throws URISyntaxException {
-		return create(HttpGet.class, domain, serviceName, version, uri);
+		return create(HttpGet.class, desc, uri);
 	}
 	
-	public HttpPost createHttpPost(String domain, String serviceName, String version, String uri) 
+	public HttpPost createHttpPost(ServiceDescriptor desc, String uri) 
 			throws URISyntaxException {
-		return create(HttpPost.class, domain, serviceName, version, uri);
+		return create(HttpPost.class, desc, uri);
 	}
 	
-	public HttpDelete createHttpDelete(String domain, String serviceName, String version, String uri) 
+	public HttpDelete createHttpDelete(ServiceDescriptor desc, String uri) 
 			throws URISyntaxException {
-		return create(HttpDelete.class, domain, serviceName, version, uri);
+		return create(HttpDelete.class, desc, uri);
 	}
 	
-	public HttpPatch createHttpPatch(String domain, String serviceName, String version, String uri) 
+	public HttpPatch createHttpPatch(ServiceDescriptor desc, String uri) 
 			throws URISyntaxException {
-		return create(HttpPatch.class, domain, serviceName, version, uri);
+		return create(HttpPatch.class, desc, uri);
 	}
 	
-	public HttpPut createHttpPut(String domain, String serviceName, String version, String uri) 
+	public HttpPut createHttpPut(ServiceDescriptor desc, String uri) 
 			throws URISyntaxException {
-		return create(HttpPut.class, domain, serviceName, version, uri);
+		return create(HttpPut.class, desc, uri);
 	}
 	
-	public HttpHead createHttpHead(String domain, String serviceName, String version, String uri) 
+	public HttpHead createHttpHead(ServiceDescriptor desc, String uri) 
 			throws URISyntaxException {
-		return create(HttpHead.class, domain, serviceName, version, uri);
+		return create(HttpHead.class, desc, uri);
 	}
 	
-	public HttpOptions createHttpOptions(String domain, String serviceName, String version, String uri) 
+	public HttpOptions createHttpOptions(ServiceDescriptor desc, String uri) 
 			throws URISyntaxException {
-		return create(HttpOptions.class, domain, serviceName, version, uri);
+		return create(HttpOptions.class, desc, uri);
 	}
 	
-	public HttpTrace createHttpTrace(String domain, String serviceName, String version, String uri) 
+	public HttpTrace createHttpTrace(ServiceDescriptor desc, String uri) 
 			throws URISyntaxException {
-		return create(HttpTrace.class, domain, serviceName, version, uri);
+		return create(HttpTrace.class, desc, uri);
 	}
 	
-	private <T extends HttpRequestBase> T create(Class<T> clazz, String domain, String serviceName, String version, String uri) 
+	private <T extends HttpRequestBase> T create(Class<T> clazz, ServiceDescriptor desc, String uri) 
 			throws URISyntaxException {
 		try {
 			T request = clazz.newInstance();
 			populateUri(request, uri);
-			populateHeader(request, domain, serviceName, version);
+			populateHeader(request, desc);
 			return request;
 		} 
 		catch (InstantiationException | IllegalAccessException e) {
@@ -101,10 +102,10 @@ public class HttpRequestFactory {
 		}
 	}
 	
-	private void populateHeader(HttpUriRequest request, String domain, String service, String version) {
-		request.setHeader(ServiceConst.HEADER_DOMAIN, domain);
-		request.setHeader(ServiceConst.HEADER_SERVICE_NAME, service);
-		request.setHeader(ServiceConst.HEADER_SERVICE_VERSION, version);
+	private void populateHeader(HttpUriRequest request, ServiceDescriptor desc) {
+		request.setHeader(ServiceConst.HEADER_DOMAIN, desc.getDomain());
+		request.setHeader(ServiceConst.HEADER_SERVICE_NAME, desc.getService());
+		request.setHeader(ServiceConst.HEADER_SERVICE_VERSION, desc.getVersion());
 		generateRequestId(request);
 	}
 }

@@ -32,12 +32,12 @@ public class TestSparkServer {
 	
     public static void main(String[] args) {
     	
-    	System.setProperty(ZkConst.ZK_CONN_STR, "localhost:2181");
+    	System.setProperty(ZkConst.ZK_CONN_STR, "127.0.0.1:2181");
 		
     	new ValueProvider().start();
 
     	int[] delays = new int[] {
-    		0, 10, 20, 30, 40	
+    		100, 100, 100, 100, 100	
     	};
     	for(int i = 0; i < delays.length; i++) {
     		final int index = i;

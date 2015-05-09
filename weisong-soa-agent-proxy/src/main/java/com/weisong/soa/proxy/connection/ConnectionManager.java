@@ -38,6 +38,7 @@ public class ConnectionManager implements ConnectionPool.Listener {
     // address:port -> serviceConnectionManager
     private Map<String, ServiceConnectionManager> serviceConnMgrMap = new ConcurrentHashMap<>();
     
+    // channel -> ConnectionPool
     private Map<Channel, ConnectionPool> channelToPoolMap = new ConcurrentHashMap<>();
     
 	public ConnectionManager() {

@@ -1,5 +1,5 @@
 ## 
-# Minimal configuration
+# Drop all request
 #
 route otherwise
   match any

@@ -16,11 +16,13 @@ import com.weisong.soa.core.zk.bootstrap.BootstrapZkClient;
 @Configuration
 public class ZkPropertyJavaConfig {
     
-    final private static String[] locations = new String[] {
-            "classpath*:/properties/*.properties"
-          , "file:/etc/override.properties"
+	final static private String PROPERTY_FILES_PATH = "property.files.path"; 
+	
+    static private String[] locations = new String[] {
+        "classpath*:/properties/*.properties"
+      , "file:/etc/override.properties"
     };
-    
+
     static private BootstrapZkClient bootstrapZkClient;
     
     @Bean
@@ -37,6 +39,11 @@ public class ZkPropertyJavaConfig {
     	ZkPropertyPlaceholderConfigurer c = new ZkPropertyPlaceholderConfigurer(zkClient);
         c.setIgnoreResourceNotFound(true);
         c.setIgnoreUnresolvablePlaceholders(true);
+
+        String path = System.getProperty(PROPERTY_FILES_PATH);
+        if(path != null) {
+        	locations[0] = locations[0].replace("/properties/", "/" + path + "/");
+        }
         c.setLocations(createResources(locations));
         return c;
     }

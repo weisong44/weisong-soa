@@ -31,15 +31,16 @@ import com.weisong.soa.util.GenericUtil;
 
 public class ProxyEngine {
 
-	final private Logger logger = LoggerFactory.getLogger(getClass().getName());
+	final private Logger logger = LoggerFactory.getLogger(getClass());
 
 	// Shutdown flag
 	private boolean shutdown;
 	
-	@Autowired @Getter private ConnectionManager connMgr;
+	@Autowired @Getter
+	private ConnectionManager connMgr;
 	
 	// Scheduling executor
-	ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(2);
+	private ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(2);
 	
 	// Request map
 	private Map<String, RequestContext> requestContextMap = new ConcurrentHashMap<>();
@@ -69,8 +70,8 @@ public class ProxyEngine {
 			while(requestContextMap.isEmpty() == false) {
 				
 				System.out.println(String.format(
-					"[%s] Waiting for %d pending requests to complete ...", 
-					ProxyUtil.df.format(new Date()), requestContextMap.size()));
+						"[%s] Waiting for %d pending requests to complete ...", 
+						ProxyUtil.df.format(new Date()), requestContextMap.size()));
 				
 				if(System.currentTimeMillis() > shutdownTime) {
 					break;
@@ -143,10 +144,6 @@ public class ProxyEngine {
 		logger.debug(String.format("Client disconnected: %s", connString));
 	}
 	
-	public void disconnectedFromServer(Channel channel) {
-		connMgr.disconnected(channel);
-	}
-	
 	public void receivedMessageFromClient(Channel clientChannel, DefaultFullHttpRequest request) {
 		
 		FullHttpRequest copiedRequest = request.copy();
@@ -208,6 +205,10 @@ public class ProxyEngine {
 				logger.debug(String.format("Cancelled timeout task"));
 			}
 		}
+	}
+	
+	public void disconnectedFromServer(Channel channel) {
+		connMgr.disconnected(channel);
 	}
 	
 	public void receivedMessageFromServer(Channel serverChannel, DefaultFullHttpResponse response) {

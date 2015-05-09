@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +28,8 @@ public class RRoute extends BaseRoutingConfig {
 	
 	@Getter @Setter private String name;
 	@Getter @Setter private String match;
-	@Getter private List<ForwardTo> forwardToList = new ArrayList<>();
+	@Getter @JsonIgnore private List<ForwardTo> forwardToList = new ArrayList<>();
+	@Getter private List<String> forwardToNames = new ArrayList<>();
 	
 	@Override
 	protected void createProc() {
