@@ -122,6 +122,9 @@ public class ProxyEngine {
 				if(ctx.isCircuitBreakerEnabled()) {
 					ctx.getCircuitBreaker().update(CircuitBreaker.TIMED_OUT);
 				}
+				if(ctx.isTargetCircuitBreakerEnabled()) {
+					ctx.getTargetCircuitBreaker().update(CircuitBreaker.TIMED_OUT);
+				}
 			}
 		}
 		
@@ -266,14 +269,18 @@ public class ProxyEngine {
 			ProxyUtil.printAccessLog(ctx, r.getStatus(), "Successfully proxied");
 			logger.debug("Forwarded response to client: " + requestId);
 			
-			if(ctx.selectedTarget != null && ctx.selectedTarget.getRoute().isCircuitBreakerEnabled()) {
-				int code = r.getStatus().code();
-				code = code >= 500 ? 
+			int code = r.getStatus().code();
+			code = code >= 500 ? 
 					CircuitBreaker.ERROR_5XX
 				  : code >= 400 ? 
-					  CircuitBreaker.ERROR_4XX
-					: CircuitBreaker.SUCCESSFUL;
+						  CircuitBreaker.ERROR_4XX
+						: CircuitBreaker.SUCCESSFUL;
+
+			if(ctx.isCircuitBreakerEnabled()) {
 				ctx.getCircuitBreaker().update(code);
+			}
+			if(ctx.isTargetCircuitBreakerEnabled()) {
+				ctx.getTargetCircuitBreaker().update(code);
 			}
 		}
 		catch (Throwable t) {

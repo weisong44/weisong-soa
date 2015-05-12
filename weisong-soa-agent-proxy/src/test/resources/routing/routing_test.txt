@@ -1,16 +1,19 @@
 ## 
 # Minimal configuration
 #
-circuit-breaker cb
+circuit-breaker route-cb
+  total-threshold 0.2
+  
+circuit-breaker target-cb
   total-threshold 0.2
   
 target-group test
-  target 192.168.1.96:4567
+  target 192.168.1.96:4567 weight 2.0 circuit-breaker target-cb
   target 1.1.1.2:5678
 
 route otherwise
   match any
-  circuit-breaker cb
+  circuit-breaker route-cb
   forward-to test
 
   

@@ -11,6 +11,7 @@ abstract public class TestRoutingBase {
 	  	"/routing/routing_more_forward_to.txt"
 	  ,	"/routing/routing_dropall.txt"	
 	  ,	"/routing/routing_passall.txt"	
+	  ,	"/routing/routing_test.txt"	
 	};
 	
 	private RRoutingConfigFactory factory;

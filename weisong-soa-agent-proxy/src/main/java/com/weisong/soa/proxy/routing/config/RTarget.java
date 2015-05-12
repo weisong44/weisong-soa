@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.weisong.soa.proxy.RequestContext;
 import com.weisong.soa.proxy.connection.ConnectionPool;
+import com.weisong.soa.proxy.degrade.CircuitBreaker;
 import com.weisong.soa.proxy.routing.config.RTarget.Proc;
 
 public class RTarget extends BaseRoutingConfig<Proc> {
@@ -22,19 +23,44 @@ public class RTarget extends BaseRoutingConfig<Proc> {
 	@Getter @JsonIgnore private RTargetGroup.Proc parentProc;
 	@Getter @Setter private String connStr;
 	@Getter @Setter private float weight = 1f;
+	@Getter @Setter private RCircuitBreaker cbDef;
 	
 	public RTarget(RTargetGroup targetGroup) {
 		this.parentProc = (RTargetGroup.Proc) targetGroup.getProc();
 	}
 	
+	@JsonIgnore
+	public boolean isCircuitBreakerEnabled() {
+		return cbDef != null;
+	}
+ 	
 	@Override
 	protected void createProc() {
 		proc = new Proc();
 	}
 	
-	public class Proc extends BaseRoutingProc implements ConnectionPool.Listener {
+	public class Proc extends BaseRoutingProc 
+			implements ConnectionPool.Listener, CircuitBreaker.Listener {
 		
-		private AtomicBoolean available = new AtomicBoolean();
+		@Getter private CircuitBreaker circuitBreaker;
+		private AtomicBoolean connPoolAvailable = new AtomicBoolean();
+		private boolean curAvailable;
+
+		@Override
+		public void start() {
+			if(isCircuitBreakerEnabled()) {
+				circuitBreaker = new CircuitBreaker(cbDef);
+				circuitBreaker.setListener(this);
+			}
+		}
+
+		@Override
+		public void stop() {
+			if(circuitBreaker != null) {
+				circuitBreaker.setListener(null);
+				circuitBreaker = null;
+			}
+		}
 
 		@Override
 		public RTarget selectTarget(RequestContext ctx) {
@@ -43,31 +69,55 @@ public class RTarget extends BaseRoutingConfig<Proc> {
 
 		@Override
 		public void connected(Channel c, ConnectionPool pool) {
-			updateAvailablity(pool);
+			updateConnPoolAvailablity(pool);
 		}
 
 		@Override
 		public void disconnected(Channel c, ConnectionPool pool) {
-			updateAvailablity(pool);
+			updateConnPoolAvailablity(pool);
 		}
 		
-		private void updateAvailablity(ConnectionPool pool) {
-			boolean oldAvailable = available.get();
-			available.set(pool.getSize() > 0);
-			if(oldAvailable != available.get()) {
-				if(available.get()) {
+		private void updateConnPoolAvailablity(ConnectionPool pool) {
+			boolean oldConnPoolAvailable = connPoolAvailable.get();
+			connPoolAvailable.set(pool.getSize() > 0);
+			if(oldConnPoolAvailable != connPoolAvailable.get()) {
+				if(connPoolAvailable.get()) {
+					logger.info(String.format("Target '%s' connetion pool becomes available", connStr));
+				}
+				else {
+					logger.info(String.format("Target '%s' connetion pool becomes unavailable", connStr));
+				}
+			}
+			updateCurAvailability();
+		}
+
+		@Override
+		public void circuitBreakerStateChanged(CircuitBreaker cb) {
+			logger.info(String.format("Circuit breaker on target '%s' is now '%s'", 
+					connStr, circuitBreaker.getState()));
+			updateCurAvailability();
+		}
+		
+		private void updateCurAvailability() {
+			boolean newAvailable = isAvailable();
+			if(curAvailable != newAvailable) {
+				curAvailable = newAvailable;
+				if(curAvailable) {
 					logger.info(String.format("Target '%s' becomes available", connStr));
 				}
 				else {
 					logger.info(String.format("Target '%s' becomes unavailable", connStr));
 				}
-				parentProc.targetStateChanged(available.get());
+				parentProc.targetStateChanged(curAvailable);
 			}
 		}
 
 		@Override
 		public boolean isAvailable() {
-			return available.get();
+			if(isCircuitBreakerEnabled() && circuitBreaker.allowRequest() == false) {
+				return false;
+			}
+			return connPoolAvailable.get();
 		}
 	}
 }

@@ -45,13 +45,17 @@ load_balancing:
 load_balancing_type: WORD
   ;
 target:
-	'target' target_value ('weight' target_weight_value)? NL
+	'target' target_value 
+		('weight' target_weight_value)?
+		('circuit-breaker' target_circuit_breaker_name)?
+		NL
   ;
 target_value: TARGET
   ;
 target_weight_value: NUM
   ;
-
+target_circuit_breaker_name: WORD
+  ;
 /****************************
   Route
 ****************************/

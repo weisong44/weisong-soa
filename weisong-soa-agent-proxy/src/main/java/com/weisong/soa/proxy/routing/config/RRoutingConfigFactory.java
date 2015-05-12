@@ -33,6 +33,7 @@ import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Route_circuit_b
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Route_nameContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Route_otherwiseContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.TargetContext;
+import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Target_circuit_breaker_nameContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Target_groupContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Target_group_nameContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Target_valueContext;
@@ -153,6 +154,17 @@ public class RRoutingConfigFactory {
 			@Override
 			public void exitTarget(TargetContext ctx) {
 				targetGroup.getTargets().add(target);
+			}
+
+			@Override
+			public void exitTarget_circuit_breaker_name(
+					Target_circuit_breaker_nameContext ctx) {
+				String name = ctx.getText();
+				RCircuitBreaker def = cbDefMap.get(name);
+				if(def == null) {
+					throw new RuntimeException("Circuit breaker not found" + name);
+				}
+				target.setCbDef(def);
 			}
 
 			@Override

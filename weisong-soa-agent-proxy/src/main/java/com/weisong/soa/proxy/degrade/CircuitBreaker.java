@@ -22,6 +22,10 @@ public class CircuitBreaker {
 		open, closed, halfOpen
 	}
 	
+	static public interface Listener {
+		void circuitBreakerStateChanged(CircuitBreaker cb);
+	}
+	
 	abstract public class Arbitor {
 		
 		/** 
@@ -83,11 +87,11 @@ public class CircuitBreaker {
 			float err5xxRatio = err5xx / total;
 			float timedOutRatio = timedOut / total;
 			float totalErrorRatio = error / total;
-			
+			/*
 			System.out.println(String.format(
-					"4xx=%5.2f 5xx=%5.2f TimedOut=%5.2f Total=%5.2f Successful=%5.0f Total=%5.0f", 
-					err4xxRatio, err5xxRatio, timedOutRatio, totalErrorRatio, error, total));
-				
+				"%16s %8s 4xx=%5.2f 5xx=%5.2f TimedOut=%5.2f Total=%5.2f Successful=%5.0f Total=%5.0f", 
+				getName(), state, err4xxRatio, err5xxRatio, timedOutRatio, totalErrorRatio, error, total));
+			*/
 			return totalErrorRatio > errTotalThreshold
 				|| err4xxRatio > err4xxThreshold
 				|| err5xxRatio > err5xxThreshold
@@ -113,6 +117,8 @@ public class CircuitBreaker {
 	private Long halfOpenStateExpirationTime;
 	
 	@Getter private State state = State.closed;
+	
+	@Setter private Listener listener;
 	
 	private Arbitor arbitor;
 	
@@ -164,20 +170,20 @@ public class CircuitBreaker {
 		}
 		
 		private void setToOpen() {
-			state = State.open;
+			setState(State.open);
 			halfOpenStateExpirationTime = null;
 			openStateExpirationTime = now() + openInterval;
 		}
 		
 		private void setToHalfOpen() {
-			state = State.halfOpen;
+			setState(State.halfOpen);
 			arbitor.reset();
 			openStateExpirationTime = null;
 			halfOpenStateExpirationTime = now() + halfOpenInterval;
 		}
 		
 		private void setToClosed() {
-			state = State.closed;
+			setState(State.closed);
 			openStateExpirationTime = null;
 			halfOpenStateExpirationTime = null;
 		}
@@ -222,5 +228,12 @@ public class CircuitBreaker {
 	
 	public String getName() {
 		return def.getName();
+	}
+	
+	public void setState(State state) {
+		this.state = state;
+		if(listener != null) {
+			listener.circuitBreakerStateChanged(this);
+		}
 	}
 }

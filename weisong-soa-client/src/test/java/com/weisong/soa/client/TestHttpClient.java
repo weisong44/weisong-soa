@@ -31,7 +31,7 @@ import com.weisong.soa.service.ServiceDescriptor;
 public class TestHttpClient {
 		
 	private int totalRequests = 200000;
-	private int delayBetweenRequest = 0;
+	private int delayBetweenRequest = 20;
 	
 	private ServiceDescriptor desc = new ServiceDescriptor("test", "TestService", "0.0.1");
 

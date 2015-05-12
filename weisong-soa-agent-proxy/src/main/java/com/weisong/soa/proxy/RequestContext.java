@@ -69,4 +69,14 @@ public class RequestContext {
 	public CircuitBreaker getCircuitBreaker() {
 		return selectedTarget.getRoute().getProc().getCircuitBreaker();
 	}
+	
+	public boolean isTargetCircuitBreakerEnabled() {
+		return selectedTarget != null
+			&& selectedTarget.getTarget() != null
+			&& selectedTarget.getTarget().isCircuitBreakerEnabled();
+	}
+	
+	public CircuitBreaker getTargetCircuitBreaker() {
+		return selectedTarget.getTarget().getProc().getCircuitBreaker();	
+	}
 }

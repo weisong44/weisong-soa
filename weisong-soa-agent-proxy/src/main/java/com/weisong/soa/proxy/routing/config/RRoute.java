@@ -44,7 +44,8 @@ public class RRoute extends BaseRoutingConfig<Proc> {
 		proc = new Proc();
 	}
 
-	public class Proc extends BaseRoutingProc implements RTargetGroup.ProcListener {
+	public class Proc extends BaseRoutingProc 
+			implements RTargetGroup.ProcListener, CircuitBreaker.Listener {
 		
 		@Getter private RequestMatcher matcher;
 		@Getter private LoadBalancingStrategy loadBalancer;
@@ -84,6 +85,7 @@ public class RRoute extends BaseRoutingConfig<Proc> {
 		public void start() {
 			if(isCircuitBreakerEnabled()) {
 				circuitBreaker = new CircuitBreaker(cbDef);
+				circuitBreaker.setListener(this);
 			}
 			availableForwardToCount = new AtomicInteger();
 			float[] weights = new float[forwardToList.size()];
@@ -137,6 +139,12 @@ public class RRoute extends BaseRoutingConfig<Proc> {
 						"Route '%s' becomes unavailable", 
 						name, availableForwardToCount.intValue()));
 			}
+		}
+
+		@Override
+		public void circuitBreakerStateChanged(CircuitBreaker cb) {
+			logger.info(String.format("Circuit breaker on route '%s' is now '%s'", 
+					name, cb.getState()));
 		}
 	}
 	
