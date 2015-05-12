@@ -3,6 +3,8 @@ package com.weisong.soa.proxy.routing.config;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BaseErrorListener;
@@ -10,17 +12,25 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 
+import com.weisong.soa.proxy.degrade.CircuitBreaker;
 import com.weisong.soa.proxy.load.balancing.LoadBalancingType;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigBaseListener;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigLexer;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser;
+import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Circuit_breakerContext;
+import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Circuit_breaker_nameContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.DropContext;
+import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Err_rate_4xxContext;
+import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Err_rate_5xxContext;
+import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Err_rate_timeoutContext;
+import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Err_rate_totalContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Forward_toContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Forward_to_destContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Forward_weight_valueContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Load_balancing_typeContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Match_valueContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.RouteContext;
+import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Route_circuit_breaker_nameContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Route_nameContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.Route_otherwiseContext;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigParser.TargetContext;
@@ -55,11 +65,49 @@ public class RRoutingConfigFactory {
 
         p.addParseListener(new RRoutingConfigBaseListener() {
         	
+        	private CircuitBreaker.Def cbDef;
+        	private Map<String, CircuitBreaker.Def> cbDefMap = new HashMap<>();
         	private RTargetGroup targetGroup;
         	private RTarget target;
         	private RRoute route;
         	private RRoute.ForwardTo forwardTo;
         	
+			@Override
+			public void exitCircuit_breaker_name(Circuit_breaker_nameContext ctx) {
+				String name = ctx.getText();
+				if(cbDefMap.containsKey(name)) {
+					throw new RuntimeException("Duplicated circuit breaker name: " + name);
+				}
+				cbDef = new CircuitBreaker.Def();
+				cbDef.setName(name);
+			}
+
+			@Override
+			public void exitErr_rate_total(Err_rate_totalContext ctx) {
+				cbDef.setErrTotalThreshold(Float.valueOf(ctx.getText()));
+			}
+
+			@Override
+			public void exitErr_rate_4xx(Err_rate_4xxContext ctx) {
+				cbDef.setErr4xxThreshold(Float.valueOf(ctx.getText()));
+			}
+
+			@Override
+			public void exitErr_rate_5xx(Err_rate_5xxContext ctx) {
+				cbDef.setErr5xxThreshold(Float.valueOf(ctx.getText()));
+			}
+
+			@Override
+			public void exitErr_rate_timeout(Err_rate_timeoutContext ctx) {
+				cbDef.setTimedOutThreshold(Float.valueOf(ctx.getText()));
+			}
+
+			@Override
+			public void exitCircuit_breaker(Circuit_breakerContext ctx) {
+				cbDefMap.put(cbDef.getName(), cbDef);
+				cbDef = null;
+			}
+
 			@Override
 			public void enterTarget_group(Target_groupContext ctx) {
 				targetGroup = new RTargetGroup();
@@ -95,7 +143,7 @@ public class RRoutingConfigFactory {
 
 			@Override
 			public void exitTarget_value(Target_valueContext ctx) {
-				target.setTarget(ctx.getText());
+				target.setConnStr(ctx.getText());
 			}
 
 			@Override
@@ -169,6 +217,17 @@ public class RRoutingConfigFactory {
 			@Override
 			public void exitMatch_value(Match_valueContext ctx) {
 				route.setMatch(ctx.getText().replace("\"", ""));
+			}
+
+			@Override
+			public void exitRoute_circuit_breaker_name(
+					Route_circuit_breaker_nameContext ctx) {
+				String name = ctx.getText();
+				CircuitBreaker.Def def = cbDefMap.get(name);
+				if(def == null) {
+					throw new RuntimeException("Circuit breaker not found" + name);
+				}
+				route.setCbDef(def);
 			}
 
 			@Override

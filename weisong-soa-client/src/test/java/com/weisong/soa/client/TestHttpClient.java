@@ -89,7 +89,7 @@ public class TestHttpClient {
 		System.setProperty("http.maxConnections", "5");
 		
 		final AtomicInteger index = new AtomicInteger();
-		int workerCount = 5;
+		int workerCount = 1;
 		Thread[] workers = new Thread[workerCount];
 		for(int i = 0; i < workerCount; i++) {
 			final int a = i + 1;
@@ -135,6 +135,7 @@ public class TestHttpClient {
 			TestHttpClient client = ctx.getBean(TestHttpClient.class);
 			client.doInvocation();
 		}
+		System.exit(0);
 	}
 	
 	@Configuration

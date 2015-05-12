@@ -23,7 +23,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.weisong.soa.proxy.RequestContext;
 import com.weisong.soa.proxy.connection.ConnectionManager;
+import com.weisong.soa.proxy.degrade.CircuitBreaker;
 import com.weisong.soa.proxy.mgmt.ProxyCallModule;
+import com.weisong.soa.proxy.routing.config.RRoute;
 import com.weisong.soa.proxy.util.ProxyUtil;
 import com.weisong.soa.service.ServiceConst;
 import com.weisong.soa.service.ServiceDescriptor;
@@ -50,7 +52,7 @@ public class ProxyEngine {
 	public ProxyEngine() {
 		Runtime.getRuntime().addShutdownHook(new ShutdownHook());
 	}
-	
+
 	@PostConstruct
 	public void start() {
 		connMgr.start();
@@ -117,6 +119,9 @@ public class ProxyEngine {
 				ctx.targetCompletionTime = System.nanoTime();
 				logger.debug(String.format("TimerTask removed context %s", ctx.getId()));
 				ProxyUtil.sendErrorAndLogAccess(ctx, HttpResponseStatus.GATEWAY_TIMEOUT, "Timed out");
+				if(ctx.isCircuitBreakerEnabled()) {
+					ctx.getCircuitBreaker().update(CircuitBreaker.TIMED_OUT);
+				}
 			}
 		}
 		
@@ -174,24 +179,42 @@ public class ProxyEngine {
 			ctx = new RequestContext(clientChannel, null, requestId, copiedRequest,  
 					desc, 1000, requestContextMap);
 
-			Channel serverChannel = connMgr.getConnection(ctx);
-			if(serverChannel != null) {
-				ctx.serverChannel = serverChannel;
-				requestContextMap.put(ctx.getId(), ctx);
-				ProxyUtil.setUserData(copiedRequest, ProxyUtil.getRemoteConnString(clientChannel));
-				ctx.targetStartTime = System.nanoTime();
-				ProxyUtil.sendMessage(serverChannel, copiedRequest);
-				ctx.timeoutTaskFuture = executor.schedule(
-						new TimeoutTask(ctx), ctx.timeout, TimeUnit.MILLISECONDS);
-				logger.debug(String.format("Scheduled timeout task at %s", 
-						new Date(System.currentTimeMillis() + ctx.timeout)));
-				logger.debug("Forwarded request to server: " + requestId);
-			}
-			else {
+			ctx.selectedTarget = connMgr.select(ctx);
+			if(ctx.selectedTarget == null) {
 				ctx.targetCompletionTime = System.nanoTime();
 				ProxyUtil.sendErrorAndLogAccess(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, 
 						"Service not available");
+				return;
 			}
+			
+			Channel rChannel = ctx.selectedTarget.getChannel();
+			if(rChannel == null) {
+				ctx.targetCompletionTime = System.nanoTime();
+				ProxyUtil.sendErrorAndLogAccess(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, 
+						"Service not available");
+				return;
+			}
+			
+			RRoute rRoute = ctx.selectedTarget.getRoute();
+			if(rRoute.getProc().allowRequest() == false) {
+				ctx.targetCompletionTime = System.nanoTime();
+				ProxyUtil.sendErrorAndLogAccess(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, 
+						"Service overloaded");
+				return;
+			}
+			
+			// Do the invocation
+			ctx.serverChannel = rChannel;
+			requestContextMap.put(ctx.getId(), ctx);
+			ProxyUtil.setUserData(copiedRequest, ProxyUtil.getRemoteConnString(clientChannel));
+			ctx.targetStartTime = System.nanoTime();
+			ProxyUtil.sendMessage(rChannel, copiedRequest);
+			ctx.timeoutTaskFuture = executor.schedule(
+					new TimeoutTask(ctx), ctx.timeout, TimeUnit.MILLISECONDS);
+			logger.debug(String.format("Scheduled timeout task at %s", 
+					new Date(System.currentTimeMillis() + ctx.timeout)));
+			logger.debug("Forwarded request to server: " + requestId);
+			
 		} 
 		catch (Throwable t) {
 			ctx.targetCompletionTime = System.nanoTime();
@@ -242,6 +265,16 @@ public class ProxyEngine {
 			ProxyUtil.sendMessage(ctx.clientChannel, r);
 			ProxyUtil.printAccessLog(ctx, r.getStatus(), "Successfully proxied");
 			logger.debug("Forwarded response to client: " + requestId);
+			
+			if(ctx.selectedTarget != null && ctx.selectedTarget.getRoute().isCircuitBreakerEnabled()) {
+				int code = r.getStatus().code();
+				code = code >= 500 ? 
+					CircuitBreaker.ERROR_5XX
+				  : code >= 400 ? 
+					  CircuitBreaker.ERROR_4XX
+					: CircuitBreaker.SUCCESSFUL;
+				ctx.getCircuitBreaker().update(code);
+			}
 		}
 		catch (Throwable t) {
 			if(ctx != null) {

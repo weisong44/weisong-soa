@@ -1,8 +1,33 @@
 grammar RRoutingConfig;
 
 routing:
-	(target_group | route | NL)* route_otherwise (NL)* EOF;
+	(circuit_breaker | target_group | route | NL)* route_otherwise (NL)* EOF;
 	
+/****************************
+  Target group
+****************************/
+circuit_breaker:
+	'circuit-breaker' circuit_breaker_name NL
+		('4xx-threshold' err_rate_4xx NL)?
+		('5xx-threshold' err_rate_5xx NL)?
+		('timeout-threshold' err_rate_timeout NL)? 
+		('total-threshold' err_rate_total NL)?
+  ;
+circuit_breaker_name:
+	WORD
+  ;
+err_rate_total:
+	NUM
+  ;
+err_rate_4xx:
+	NUM
+  ;
+err_rate_5xx:
+	NUM
+  ;
+err_rate_timeout:
+	NUM
+  ;
 /****************************
   Target group
 ****************************/
@@ -31,7 +56,7 @@ target_weight_value: NUM
   Route
 ****************************/
 route:
-	route_def match (forward_to)+
+	route_def match (route_circuit_breaker)? (forward_to)+
   ;
 route_def:
 	'route' route_name NL
@@ -48,12 +73,16 @@ match_value: ('any' | 'none' | PATTERN)
   ;
 drop: 'drop'
   ;
+route_circuit_breaker: 'circuit-breaker' route_circuit_breaker_name NL
+  ; 
+route_circuit_breaker_name: WORD
+  ; 
 forward_to_dest: WORD
   ;
 forward_weight_value: NUM
   ;
 route_otherwise:
-	route_otherwise_def match (forward_to)+
+	route_otherwise_def match (route_circuit_breaker)? (forward_to)+
   ;
 route_otherwise_def:
 	'route otherwise' NL

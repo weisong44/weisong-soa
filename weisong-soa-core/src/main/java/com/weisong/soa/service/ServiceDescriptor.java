@@ -1,9 +1,8 @@
 package com.weisong.soa.service;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter @Setter
+@Data
 public class ServiceDescriptor {
 	
 	private String domain;
@@ -14,10 +13,5 @@ public class ServiceDescriptor {
 		this.domain = domain;
 		this.service = service;
 		this.version = version;
-	}
-	
-	@Override
-	public String toString() {
-		return String.format("%s-%s-%s", domain, service, version);
 	}
 }

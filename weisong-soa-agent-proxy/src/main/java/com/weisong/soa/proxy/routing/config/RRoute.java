@@ -4,20 +4,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import org.codehaus.jackson.annotate.JsonIgnore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import com.weisong.soa.proxy.RequestContext;
+import com.weisong.soa.proxy.degrade.CircuitBreaker;
 import com.weisong.soa.proxy.load.balancing.LoadBalancingStrategy;
 import com.weisong.soa.proxy.load.balancing.WeightedRandomStrategy;
+import com.weisong.soa.proxy.routing.config.RRoute.Proc;
 import com.weisong.soa.proxy.routing.match.DefaultMatcher;
 import com.weisong.soa.proxy.routing.match.RequestMatcher;
 
-public class RRoute extends BaseRoutingConfig {
+public class RRoute extends BaseRoutingConfig<Proc> {
 
 	static public class ForwardTo {
 		@Getter @Setter private RTargetGroup targetGroup;
@@ -28,18 +30,25 @@ public class RRoute extends BaseRoutingConfig {
 	
 	@Getter @Setter private String name;
 	@Getter @Setter private String match;
+	@Getter @Setter private CircuitBreaker.Def cbDef;
 	@Getter @JsonIgnore private List<ForwardTo> forwardToList = new ArrayList<>();
 	@Getter private List<String> forwardToNames = new ArrayList<>();
 	
+	@JsonIgnore
+	public boolean isCircuitBreakerEnabled() {
+		return cbDef != null;
+	}
+ 	
 	@Override
 	protected void createProc() {
 		proc = new Proc();
 	}
-	
+
 	public class Proc extends BaseRoutingProc implements RTargetGroup.ProcListener {
 		
 		@Getter private RequestMatcher matcher;
 		@Getter private LoadBalancingStrategy loadBalancer;
+		@Getter private CircuitBreaker circuitBreaker;
 
 		private AtomicInteger availableForwardToCount;
 		
@@ -62,6 +71,10 @@ public class RRoute extends BaseRoutingConfig {
 			return null;
 		}
 		
+		public boolean allowRequest() {
+			return circuitBreaker == null || circuitBreaker.allowRequest();
+		}
+		
 		@Override
 		public boolean isAvailable() {
 			return availableForwardToCount.intValue() > 0;
@@ -69,6 +82,9 @@ public class RRoute extends BaseRoutingConfig {
 		
 		@Override
 		public void start() {
+			if(isCircuitBreakerEnabled()) {
+				circuitBreaker = new CircuitBreaker(cbDef);
+			}
 			availableForwardToCount = new AtomicInteger();
 			float[] weights = new float[forwardToList.size()];
 			for(int i = 0; i < forwardToList.size(); i++) {
@@ -85,6 +101,7 @@ public class RRoute extends BaseRoutingConfig {
 		
 		@Override
 		public void stop() {
+			circuitBreaker = null;
 			availableForwardToCount = null;
 			for(int i = 0; i < forwardToList.size(); i++) {
 				ForwardTo fw = forwardToList.get(i);

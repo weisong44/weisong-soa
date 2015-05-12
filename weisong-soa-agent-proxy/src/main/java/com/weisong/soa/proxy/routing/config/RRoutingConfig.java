@@ -1,17 +1,21 @@
 package com.weisong.soa.proxy.routing.config;
 
+import io.netty.channel.Channel;
+
 import java.util.LinkedList;
 import java.util.List;
 
-import org.codehaus.jackson.annotate.JsonIgnore;
-
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import org.codehaus.jackson.annotate.JsonIgnore;
 
 import com.weisong.soa.proxy.RequestContext;
+import com.weisong.soa.proxy.routing.config.RRoutingConfig.Proc;
 
 @NoArgsConstructor
-public class RRoutingConfig extends BaseRoutingConfig {
+public class RRoutingConfig extends BaseRoutingConfig<Proc> {
 	
 	@Getter private List<RTargetGroup> targetGroups	= new LinkedList<>();
 	@Getter private List<RRoute> routes	= new LinkedList<>();
@@ -41,6 +45,12 @@ public class RRoutingConfig extends BaseRoutingConfig {
 		proc = new Proc();
 	}
 	
+	static public class SelectedTarget {
+		@Getter @Setter private RRoute route;
+		@Getter @Setter private RTarget target;
+		@Getter @Setter private Channel channel;
+	}
+		
 	public class Proc extends BaseRoutingProc {
 
 		@Override
@@ -59,11 +69,18 @@ public class RRoutingConfig extends BaseRoutingConfig {
 
 		@Override
 		public RTarget selectTarget(RequestContext ctx) {
+			throw new RuntimeException("Not supported");
+		}
+
+		public SelectedTarget select(RequestContext ctx) {
 			for(RRoute r : routes) {
+				SelectedTarget result = new SelectedTarget();
+				result.setRoute(r);
 				RTarget target = r.getProc().selectTarget(ctx);
 				if(target != null) {
-					return target;
+					result.setTarget(target);
 				}
+				return result;
 			}
 			return null;
 		}

@@ -13,13 +13,14 @@ import org.slf4j.LoggerFactory;
 
 import com.weisong.soa.proxy.RequestContext;
 import com.weisong.soa.proxy.connection.ConnectionPool;
+import com.weisong.soa.proxy.routing.config.RTarget.Proc;
 
-public class RTarget extends BaseRoutingConfig {
+public class RTarget extends BaseRoutingConfig<Proc> {
 	
 	final private Logger logger = LoggerFactory.getLogger(getClass().getName());
 	
 	@Getter @JsonIgnore private RTargetGroup.Proc parentProc;
-	@Getter @Setter private String target;
+	@Getter @Setter private String connStr;
 	@Getter @Setter private float weight = 1f;
 	
 	public RTarget(RTargetGroup targetGroup) {
@@ -55,10 +56,10 @@ public class RTarget extends BaseRoutingConfig {
 			available.set(pool.getSize() > 0);
 			if(oldAvailable != available.get()) {
 				if(available.get()) {
-					logger.info(String.format("Target '%s' becomes available", target));
+					logger.info(String.format("Target '%s' becomes available", connStr));
 				}
 				else {
-					logger.info(String.format("Target '%s' becomes unavailable", target));
+					logger.info(String.format("Target '%s' becomes unavailable", connStr));
 				}
 				parentProc.targetStateChanged(available.get());
 			}

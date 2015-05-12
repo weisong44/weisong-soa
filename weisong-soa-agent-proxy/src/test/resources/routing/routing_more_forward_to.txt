@@ -1,3 +1,26 @@
+circuit-breaker cb1
+
+circuit-breaker cb2
+  4xx-threshold 0.2
+
+circuit-breaker cb3
+  5xx-threshold 0.3
+
+circuit-breaker cb4
+  4xx-threshold 0.2
+  5xx-threshold 0.3
+
+circuit-breaker cb5
+  4xx-threshold 0.2
+  5xx-threshold 0.3
+  timeout-threshold 0.4
+
+circuit-breaker cb6
+  4xx-threshold 0.2
+  5xx-threshold 0.3
+  timeout-threshold 0.4
+  total-threshold 0.5
+
 target-group test
   load-balancing round-robin
   target 1.1.1.1:4646
@@ -17,9 +40,11 @@ target-group normal-east
 
 route test
   match "address=4.4.4.4"
+  circuit-breaker cb1
   forward-to test weight 1.0
 
 route otherwise
   match "address~=5.5.5.5"
+  circuit-breaker cb2
   forward-to normal-west
   forward-to normal-east weight 100

@@ -23,13 +23,21 @@ import com.weisong.soa.core.zk.service.ZkServiceHandlerReadOnly;
 import com.weisong.soa.proxy.RequestContext;
 import com.weisong.soa.proxy.engine.ProxyEngine;
 import com.weisong.soa.proxy.engine.ProxyNettyHandler;
+import com.weisong.soa.proxy.engine.ServiceConfigManager;
+import com.weisong.soa.proxy.routing.config.RRoutingConfig.SelectedTarget;
 
 public class ConnectionManager implements ConnectionPool.Listener {
 	
-	@Autowired private ProxyEngine engine;
+	@Autowired @Getter private ProxyEngine engine;
 	
-	@Autowired private ZkPropertyChangeRegistry propsChangeRegistry;
-	@Autowired private ZkServiceHandlerReadOnly zkHandler;
+	@Autowired 
+	private ZkPropertyChangeRegistry propsChangeRegistry;
+	
+	@Autowired 
+	private ZkServiceHandlerReadOnly zkHandler;
+	
+	@Autowired @Getter 
+	private ServiceConfigManager serviceConfigMgr;
 	
 	// The client side network stack
 	@Getter private Bootstrap bootstrap;
@@ -64,18 +72,18 @@ public class ConnectionManager implements ConnectionPool.Listener {
 		eventLoop.shutdownGracefully();
 	}
 	
-	public Channel getConnection(RequestContext ctx) 
+	public SelectedTarget select(RequestContext ctx) 
 			throws Exception {
 		ServiceConnectionManager mgr = null;
 		String key = getKey(ctx);
 		synchronized (serviceConnMgrMap) {
 			mgr = serviceConnMgrMap.get(key);
 			if(mgr == null) {
-				mgr = new ServiceConnectionManager(this, ctx.desc, propsChangeRegistry, engine, zkHandler);
+				mgr = new ServiceConnectionManager(this, ctx.desc, propsChangeRegistry, zkHandler);
 				serviceConnMgrMap.put(key, mgr);
 			}
 		}
-		return mgr.getConnection(ctx);
+		return mgr.select(ctx);
 	}
 	
 	@Override

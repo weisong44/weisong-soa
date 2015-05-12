@@ -32,6 +32,7 @@ import com.weisong.soa.core.zk.service.ZkServiceHandlerImpl;
 import com.weisong.soa.proxy.connection.ConnectionManager;
 import com.weisong.soa.proxy.engine.ProxyEngine;
 import com.weisong.soa.proxy.engine.ProxyNettyHandler;
+import com.weisong.soa.proxy.engine.ServiceConfigManager;
 import com.weisong.soa.proxy.mgmt.MainProxyModule;
 import com.weisong.soa.proxy.mgmt.ProxyCallModule;
 import com.weisong.soa.proxy.util.ProxyUtil;
@@ -133,6 +134,11 @@ public class ProxyMain {
 		@Bean
 		ConnectionManager connectionManager() {
 			return new ConnectionManager();
+		}
+		
+		@Bean
+		ServiceConfigManager serviceConfigManager() {
+			return new ServiceConfigManager();
 		}
 
 	}

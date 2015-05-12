@@ -6,6 +6,8 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 
+import com.weisong.soa.proxy.degrade.CircuitBreaker;
+import com.weisong.soa.proxy.routing.config.RRoutingConfig.SelectedTarget;
 import com.weisong.soa.proxy.util.ProxyUtil;
 import com.weisong.soa.service.ServiceDescriptor;
 
@@ -27,6 +29,8 @@ public class RequestContext {
 	
 	public ScheduledFuture<?> timeoutTaskFuture;
 	public Map<String, RequestContext> reqeustContextMap;
+	
+	public SelectedTarget selectedTarget;
 
 	static public String getContextId(Channel clientChannel, Channel serverChannel, String requestId) {
 		String clientConnId = ProxyUtil.getRemoteConnString(clientChannel); 
@@ -55,5 +59,14 @@ public class RequestContext {
 
 	public String getId() {
 		return getContextId(clientChannel, serverChannel, requestId);
+	}
+	
+	public boolean isCircuitBreakerEnabled() {
+		return selectedTarget != null 
+			&& selectedTarget.getRoute().isCircuitBreakerEnabled();
+	}
+	
+	public CircuitBreaker getCircuitBreaker() {
+		return selectedTarget.getRoute().getProc().getCircuitBreaker();
 	}
 }

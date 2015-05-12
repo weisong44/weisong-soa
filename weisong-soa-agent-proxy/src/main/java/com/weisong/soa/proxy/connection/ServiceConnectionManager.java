@@ -1,7 +1,5 @@
 package com.weisong.soa.proxy.connection;
 
-import io.netty.channel.Channel;
-
 import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,7 +11,6 @@ import java.util.Set;
 import lombok.Getter;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.NodeCacheListener;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.slf4j.Logger;
@@ -23,8 +20,9 @@ import com.weisong.soa.core.zk.config.ZkPropertyChangeRegistry;
 import com.weisong.soa.core.zk.service.ZkServiceHandlerReadOnly;
 import com.weisong.soa.core.zk.util.ZkServiceUitl;
 import com.weisong.soa.proxy.RequestContext;
-import com.weisong.soa.proxy.engine.ProxyEngine;
+import com.weisong.soa.proxy.engine.ServiceConfigManager.Listener;
 import com.weisong.soa.proxy.routing.config.RRoutingConfig;
+import com.weisong.soa.proxy.routing.config.RRoutingConfig.SelectedTarget;
 import com.weisong.soa.proxy.routing.config.RRoutingConfigFactory;
 import com.weisong.soa.proxy.routing.config.RTarget;
 import com.weisong.soa.service.ServiceConst;
@@ -38,8 +36,6 @@ class ServiceConnectionManager {
 	
 	@Getter private ServiceDescriptor desc;
 	
-	private ProxyEngine engine;
-	
 	private ZkServiceHandlerReadOnly zkHandler;
 	private String zkPath;
 	
@@ -51,24 +47,25 @@ class ServiceConnectionManager {
     
 	public ServiceConnectionManager(ConnectionManager connMgr, ServiceDescriptor desc, 
 			ZkPropertyChangeRegistry propsChangeRegistry, 
-			ProxyEngine engine, ZkServiceHandlerReadOnly zkHandler) 
+			ZkServiceHandlerReadOnly zkHandler) 
 			throws Exception {
 		this.connMgr = connMgr;
 		this.desc = desc;
-		this.engine = engine;
 		this.zkHandler = zkHandler;
 		this.zkPath = ZkServiceUitl.getRegistryParentPath(
 				desc.getDomain(), desc.getService());
 		this.routingConfigFactory = new RRoutingConfigFactory();
 		
 		// Read the routing configuration
-		String path = ZkServiceUitl.getConfigNodePath(desc);
-		zkHandler.getZkClient().watch(path, new NodeCacheListener() {
+		connMgr.getServiceConfigMgr().getServiceConfig(desc, new Listener() {
 			@Override
-			public void nodeChanged() throws Exception {
-				logger.info(String.format(
-					"Configuration for %s changed on ZK, read again", getDesc()));
-				readConfig();
+			public void serviceConfigChanged(ServiceDescriptor desc, Properties props) {
+				try {
+					configChanged(props);
+				} 
+				catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		});
 		
@@ -86,8 +83,7 @@ class ServiceConnectionManager {
 		
 	}
 	
-	private void readConfig() throws Exception  {
-		Properties props = zkHandler.readConfig(desc);
+	private void configChanged(Properties props) throws Exception  {
 		String config = props.getProperty(ServiceConst.PROP_ROUTING_CONFIG);
 		if(config == null) {
 			throw new RuntimeException(String.format(
@@ -104,11 +100,11 @@ class ServiceConnectionManager {
 		
 		// Retain all required pools
 		for(RTarget t : newRoutingConfig.getAllTargets()) {
-			String connStr = t.getTarget();
+			String connStr = t.getConnStr();
 			synchronized (this) {
 				ConnectionPool pool = targetToPoolMap.get(connStr);
 				if(pool == null) {
-					pool = new ConnectionPool(engine, connStr, 5);
+					pool = new ConnectionPool(connMgr.getEngine(), connStr, 5);
 					targetToPoolMap.put(connStr, pool);
 					pool.addListener(connMgr);
 					if(availTargetSet.contains(connStr)) {
@@ -141,7 +137,7 @@ class ServiceConnectionManager {
 		// Release any unused pools
 		if(oldRoutingConfig != null) {
 			for(RTarget t : oldRoutingConfig.getAllTargets()) {
-				String connStr = t.getTarget();
+				String connStr = t.getConnStr();
 				synchronized (this) {
 					ConnectionPool pool = targetToPoolMap.get(connStr);
 					pool.removeListener((RTarget.Proc) t.getProc());
@@ -178,17 +174,18 @@ class ServiceConnectionManager {
 		}
 	}
 	
-	public Channel getConnection(RequestContext ctx) {
+	public SelectedTarget select(RequestContext ctx) {
 		if(routingConfig == null || targetToPoolMap.isEmpty()) {
 			return null;
 		}
-		RTarget target = routingConfig.getProc().selectTarget(ctx);
-		if(target == null) {
-			return null;
+		
+		SelectedTarget result = routingConfig.getProc().select(ctx);
+		if(result != null && result.getTarget() != null) {
+			synchronized (this) {
+				ConnectionPool pool = targetToPoolMap.get(result.getTarget().getConnStr());
+				result.setChannel(pool.getConnection());
+			}
 		}
-		synchronized (this) {
-			ConnectionPool pool = targetToPoolMap.get(target.getTarget());
-			return pool.getConnection();
-		}
+		return result;
 	}
 }

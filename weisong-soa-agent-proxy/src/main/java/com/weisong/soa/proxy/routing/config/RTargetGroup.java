@@ -18,9 +18,10 @@ import com.weisong.soa.proxy.load.balancing.LoadBalancingStrategy;
 import com.weisong.soa.proxy.load.balancing.LoadBalancingType;
 import com.weisong.soa.proxy.load.balancing.WeightedRandomStrategy;
 import com.weisong.soa.proxy.load.balancing.WeightedRoundRobinStragegy;
+import com.weisong.soa.proxy.routing.config.RTargetGroup.Proc;
 
 @NoArgsConstructor
-public class RTargetGroup extends BaseRoutingConfig {
+public class RTargetGroup extends BaseRoutingConfig<Proc> {
 	
 	final private Logger logger = LoggerFactory.getLogger(getClass().getName());
 	
