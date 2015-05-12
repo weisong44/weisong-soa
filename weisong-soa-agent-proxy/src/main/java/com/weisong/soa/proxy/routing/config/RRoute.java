@@ -30,7 +30,7 @@ public class RRoute extends BaseRoutingConfig<Proc> {
 	
 	@Getter @Setter private String name;
 	@Getter @Setter private String match;
-	@Getter @Setter private CircuitBreaker.Def cbDef;
+	@Getter @Setter private RCircuitBreaker cbDef;
 	@Getter @JsonIgnore private List<ForwardTo> forwardToList = new ArrayList<>();
 	@Getter private List<String> forwardToNames = new ArrayList<>();
 	

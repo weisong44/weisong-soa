@@ -12,7 +12,6 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 
-import com.weisong.soa.proxy.degrade.CircuitBreaker;
 import com.weisong.soa.proxy.load.balancing.LoadBalancingType;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigBaseListener;
 import com.weisong.soa.proxy.routing.antlr4.RRoutingConfigLexer;
@@ -65,8 +64,8 @@ public class RRoutingConfigFactory {
 
         p.addParseListener(new RRoutingConfigBaseListener() {
         	
-        	private CircuitBreaker.Def cbDef;
-        	private Map<String, CircuitBreaker.Def> cbDefMap = new HashMap<>();
+        	private RCircuitBreaker cbDef;
+        	private Map<String, RCircuitBreaker> cbDefMap = new HashMap<>();
         	private RTargetGroup targetGroup;
         	private RTarget target;
         	private RRoute route;
@@ -78,7 +77,7 @@ public class RRoutingConfigFactory {
 				if(cbDefMap.containsKey(name)) {
 					throw new RuntimeException("Duplicated circuit breaker name: " + name);
 				}
-				cbDef = new CircuitBreaker.Def();
+				cbDef = new RCircuitBreaker();
 				cbDef.setName(name);
 			}
 
@@ -223,7 +222,7 @@ public class RRoutingConfigFactory {
 			public void exitRoute_circuit_breaker_name(
 					Route_circuit_breaker_nameContext ctx) {
 				String name = ctx.getText();
-				CircuitBreaker.Def def = cbDefMap.get(name);
+				RCircuitBreaker def = cbDefMap.get(name);
 				if(def == null) {
 					throw new RuntimeException("Circuit breaker not found" + name);
 				}

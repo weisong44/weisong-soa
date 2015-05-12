@@ -7,6 +7,7 @@ import java.util.TimerTask;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.weisong.soa.proxy.routing.config.RCircuitBreaker;
 import com.weisong.soa.proxy.util.SlidingWindowCounter;
 
 public class CircuitBreaker {
@@ -19,14 +20,6 @@ public class CircuitBreaker {
 
 	static public enum State {
 		open, closed, halfOpen
-	}
-	
-	static public class Def {
-		@Getter @Setter private String name;
-		@Getter @Setter private float err4xxThreshold = Float.MAX_VALUE;
-		@Getter @Setter private float err5xxThreshold = Float.MAX_VALUE;
-		@Getter @Setter private float timedOutThreshold = Float.MAX_VALUE;
-		@Getter @Setter private float errTotalThreshold = 0.5f;
 	}
 	
 	abstract public class Arbitor {
@@ -61,11 +54,11 @@ public class CircuitBreaker {
 		@Getter @Setter private float timedOutThreshold = Float.MAX_VALUE;
 		@Getter @Setter private float errTotalThreshold = 0.5f;
 		
-		private DefaultArbitor(Def def) {
-			this.err4xxThreshold = def.err4xxThreshold;
-			this.err5xxThreshold = def.err5xxThreshold;
-			this.timedOutThreshold = def.timedOutThreshold;
-			this.errTotalThreshold = def.errTotalThreshold;
+		private DefaultArbitor(RCircuitBreaker def) {
+			this.err4xxThreshold = def.getErr4xxThreshold();
+			this.err5xxThreshold = def.getErr5xxThreshold();
+			this.timedOutThreshold = def.getTimedOutThreshold();
+			this.errTotalThreshold = def.getErrTotalThreshold();
 		}
 		
 		@Override
@@ -104,7 +97,7 @@ public class CircuitBreaker {
 	
 	static private Timer timer = new Timer();
 
-	private Def def;
+	private RCircuitBreaker def;
 	
 	// Intervals
 	@Getter @Setter private int checkingInterval;
@@ -190,15 +183,15 @@ public class CircuitBreaker {
 		}
 	};
 	
-	public CircuitBreaker(Def def) {
+	public CircuitBreaker(RCircuitBreaker def) {
 		this(def, 1000);
 	}
 	
-	public CircuitBreaker(Def def, int checkingInterval) {
+	public CircuitBreaker(RCircuitBreaker def, int checkingInterval) {
 		this(def, null, checkingInterval);
 	}
 	
-	public CircuitBreaker(Def def, Arbitor arbitor, int checkingInterval) {
+	public CircuitBreaker(RCircuitBreaker def, Arbitor arbitor, int checkingInterval) {
 		this.def = def;
 		this.checkingInterval = checkingInterval;
 		this.openInterval = openIntervalRatio * checkingInterval;
@@ -228,6 +221,6 @@ public class CircuitBreaker {
 	}
 	
 	public String getName() {
-		return def.name;
+		return def.getName();
 	}
 }

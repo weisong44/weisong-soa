@@ -11,8 +11,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.weisong.soa.proxy.degrade.CircuitBreaker;
-import com.weisong.soa.proxy.degrade.CircuitBreaker.Def;
 import com.weisong.soa.proxy.load.balancing.WeightedRandomStrategy;
+import com.weisong.soa.proxy.routing.config.RCircuitBreaker;
 
 public class TestCircuitBreaker {
 	
@@ -25,7 +25,7 @@ public class TestCircuitBreaker {
 	@Before
 	public void setup() {
 		log("=======================");
-		CircuitBreaker.Def def = new Def();
+		RCircuitBreaker def = new RCircuitBreaker();
 		cb = new CircuitBreaker(def, 100);
 		startTime = System.currentTimeMillis();
 		monitor = new StateMonitor();
